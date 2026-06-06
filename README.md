@@ -70,6 +70,52 @@ VITE_SPACETIMEDB_URI=ws://127.0.0.1:3000
 VITE_SPACETIMEDB_DATABASE=escapeorbitdev
 ```
 
+When unset, local dev uses these defaults automatically (`import.meta.env.DEV`).
+
+## Deploy to Vercel (production)
+
+The frontend connects to **SpacetimeDB Maincloud** in production. Localhost is never used on Vercel builds.
+
+### 1. Publish the module to Maincloud (one-time / after Rust changes)
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+export RUSTUP_TOOLCHAIN=stable
+
+# Log in if needed: spacetime login
+npm run spacetime:publish:prod
+```
+
+This publishes the Rust module to **Maincloud** as database **`escape-orbit`** (see `spacetime.json`).
+
+### 2. Set Vercel environment variables
+
+In **Vercel → Project → Settings → Environment Variables**, add both variables for **Production** (and Preview if you want preview deploys to work):
+
+| Name | Value |
+|------|-------|
+| `VITE_SPACETIMEDB_URI` | `wss://maincloud.spacetimedb.com` |
+| `VITE_SPACETIMEDB_DATABASE` | `escape-orbit` |
+
+`https://maincloud.spacetimedb.com` also works — the client normalizes it to `wss://`.
+
+These are baked in at **build time** (Vite `VITE_*` prefix). After adding or changing them, trigger a **Redeploy** in Vercel.
+
+### 3. Verify
+
+Open the deployed site. On failure, the landing screen and browser console show:
+
+- SpacetimeDB host
+- Database name
+- URI / WebSocket subscribe path
+- Connection error message
+
+Common causes:
+
+- Env vars missing → redeploy after setting them
+- Module not published to Maincloud → run `npm run spacetime:publish:prod`
+- Wrong database name → must match the name used in `spacetime publish` (default: `escape-orbit`)
+
 ## Demo: two-browser multiplayer
 
 1. Open the app in **two browser windows** (or one normal + one incognito).

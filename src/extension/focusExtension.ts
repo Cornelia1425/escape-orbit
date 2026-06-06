@@ -1,5 +1,4 @@
-/** Paste your extension ID from chrome://extensions after Load unpacked. */
-export const ESCAPE_ORBIT_EXTENSION_ID = "PASTE_EXTENSION_ID_HERE";
+const EXTENSION_ID_STORAGE_KEY = "escape_orbit_extension_id";
 
 type ExtensionMessageType = "ENABLE_FOCUS_MODE" | "DISABLE_FOCUS_MODE" | "GET_STATUS";
 
@@ -34,19 +33,44 @@ declare global {
   }
 }
 
-function isExtensionConfigured(): boolean {
-  return (
-    ESCAPE_ORBIT_EXTENSION_ID.length > 0 &&
-    ESCAPE_ORBIT_EXTENSION_ID !== "PASTE_EXTENSION_ID_HERE"
-  );
+const debugOnceFlags = {
+  notConfigured: false,
+  runtimeUnavailable: false,
+};
+
+function logFocusGuardDebugOnce(
+  flag: keyof typeof debugOnceFlags,
+  message: string,
+) {
+  if (!import.meta.env.DEV || debugOnceFlags[flag]) return;
+  debugOnceFlags[flag] = true;
+  console.debug(`[Escape Orbit] Focus Guard: ${message}`);
+}
+
+function resolveExtensionId(): string | undefined {
+  const fromEnv = import.meta.env.VITE_EXTENSION_ID?.trim();
+  if (fromEnv) return fromEnv;
+
+  try {
+    const fromStorage = localStorage.getItem(EXTENSION_ID_STORAGE_KEY)?.trim();
+    if (fromStorage) return fromStorage;
+  } catch {
+    // localStorage may be unavailable in some contexts
+  }
+
+  return undefined;
 }
 
 function sendExtensionMessage(type: ExtensionMessageType): Promise<FocusGuardResult> {
   return new Promise((resolve) => {
+    const extensionId = resolveExtensionId();
     const runtime = window.chrome?.runtime;
 
-    if (!isExtensionConfigured()) {
-      console.warn("[Escape Orbit] Focus Guard: extension ID is not configured");
+    if (!extensionId) {
+      logFocusGuardDebugOnce(
+        "notConfigured",
+        "extension ID is not configured (set VITE_EXTENSION_ID in .env or localStorage escape_orbit_extension_id)",
+      );
       resolve({
         connected: false,
         ok: false,
@@ -56,7 +80,10 @@ function sendExtensionMessage(type: ExtensionMessageType): Promise<FocusGuardRes
     }
 
     if (!runtime?.sendMessage) {
-      console.warn("[Escape Orbit] Focus Guard: chrome.runtime.sendMessage unavailable");
+      logFocusGuardDebugOnce(
+        "runtimeUnavailable",
+        "chrome.runtime.sendMessage unavailable (Chrome extension API not present on this page)",
+      );
       resolve({
         connected: false,
         ok: false,
@@ -65,14 +92,14 @@ function sendExtensionMessage(type: ExtensionMessageType): Promise<FocusGuardRes
       return;
     }
 
-    console.log(`Sending ${type} to extension`);
-
     try {
-      runtime.sendMessage(ESCAPE_ORBIT_EXTENSION_ID, { type }, (response) => {
+      runtime.sendMessage(extensionId, { type }, (response) => {
         const lastError = runtime.lastError;
 
         if (lastError?.message) {
-          console.error("[Escape Orbit] chrome.runtime.lastError:", lastError.message);
+          if (import.meta.env.DEV) {
+            console.debug("[Escape Orbit] Focus Guard:", lastError.message);
+          }
           resolve({
             connected: false,
             ok: false,
@@ -82,7 +109,6 @@ function sendExtensionMessage(type: ExtensionMessageType): Promise<FocusGuardRes
           return;
         }
 
-        console.log("[Escape Orbit] extension response:", response);
         resolve({
           connected: true,
           ok: Boolean(response?.ok ?? response?.focusMode ?? response?.blockingOn),
@@ -91,7 +117,9 @@ function sendExtensionMessage(type: ExtensionMessageType): Promise<FocusGuardRes
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error("[Escape Orbit] Focus Guard send failed:", message);
+      if (import.meta.env.DEV) {
+        console.debug("[Escape Orbit] Focus Guard send failed:", message);
+      }
       resolve({
         connected: false,
         ok: false,
@@ -102,12 +130,10 @@ function sendExtensionMessage(type: ExtensionMessageType): Promise<FocusGuardRes
 }
 
 export async function enableFocusGuard(): Promise<FocusGuardResult> {
-  console.log("Sending ENABLE_FOCUS_MODE to extension");
   return sendExtensionMessage("ENABLE_FOCUS_MODE");
 }
 
 export async function disableFocusGuard(): Promise<FocusGuardResult> {
-  console.log("Sending DISABLE_FOCUS_MODE to extension");
   return sendExtensionMessage("DISABLE_FOCUS_MODE");
 }
 

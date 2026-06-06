@@ -42,6 +42,7 @@ export default function LandingScreen({
         borderRadius: "50%",
         border: "1px solid rgba(80,120,255,0.08)",
         animation: "spinSlow 30s linear infinite",
+        pointerEvents: "none",
       }} />
       <div style={{
         position: "absolute",
@@ -50,8 +51,16 @@ export default function LandingScreen({
         borderRadius: "50%",
         border: "1px solid rgba(255,100,50,0.06)",
         animation: "spinSlow 20s linear infinite reverse",
+        pointerEvents: "none",
       }} />
 
+      <div style={{
+        position: "relative",
+        zIndex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}>
       <div style={{
         width: "6px",
         height: "6px",
@@ -60,6 +69,7 @@ export default function LandingScreen({
         boxShadow: "0 0 20px 8px rgba(80,120,255,0.3), 0 0 60px 20px rgba(80,120,255,0.1)",
         marginBottom: "40px",
         animation: "pulse 3s ease-in-out infinite",
+        pointerEvents: "none",
       }} />
 
       <h1 style={{
@@ -126,17 +136,22 @@ export default function LandingScreen({
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="your name"
+          autoComplete="nickname"
+          autoCapitalize="words"
+          enterKeyHint="go"
           style={{
             width: "100%",
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(100,140,200,0.25)",
             color: "rgba(200,220,255,0.9)",
             fontFamily: "'DM Mono', monospace",
-            fontSize: "12px",
+            fontSize: "16px",
             padding: "12px 14px",
             outline: "none",
             letterSpacing: "0.06em",
             boxSizing: "border-box",
+            WebkitAppearance: "none",
+            touchAction: "manipulation",
           }}
         />
       </div>
@@ -169,10 +184,12 @@ export default function LandingScreen({
           maxWidth: "360px",
           textAlign: "center",
           lineHeight: 1.6,
+          whiteSpace: "pre-wrap",
         }}>
           {error}
         </div>
       )}
+      </div>
 
       <div style={{
         position: "absolute",
@@ -182,6 +199,7 @@ export default function LandingScreen({
         color: "rgba(100,130,200,0.35)",
         letterSpacing: "0.15em",
         textTransform: "uppercase",
+        pointerEvents: "none",
       }}>
         ◦◦◦ multiplayer focus · beta ◦◦◦
       </div>

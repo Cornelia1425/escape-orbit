@@ -8,10 +8,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "spacetime:build": "RUSTUP_TOOLCHAIN=stable spacetime build",
-    "spacetime:publish": "RUSTUP_TOOLCHAIN=stable spacetime publish --env dev --yes",
-    "spacetime:generate": "RUSTUP_TOOLCHAIN=stable spacetime generate --env dev",
-    "spacetime:start": "spacetime start"
+    "spacetime:login": "export PATH=\"$HOME/.local/bin:$PATH\" && spacetime login",
+    "spacetime:build": "export PATH=\"$HOME/.local/bin:$PATH\" && RUSTUP_TOOLCHAIN=stable spacetime build",
+    "spacetime:publish": "export PATH=\"$HOME/.local/bin:$PATH\" && RUSTUP_TOOLCHAIN=stable spacetime publish --env dev --yes",
+    "spacetime:publish:prod": "export PATH=\"$HOME/.local/bin:$PATH\" && RUSTUP_TOOLCHAIN=stable spacetime publish escape-orbit -s maincloud --yes=remote",
+    "spacetime:generate": "export PATH=\"$HOME/.local/bin:$PATH\" && RUSTUP_TOOLCHAIN=stable spacetime generate --env dev",
+    "spacetime:start": "export PATH=\"$HOME/.local/bin:$PATH\" && spacetime start"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

@@ -5,11 +5,15 @@ import {
   tables,
 } from "../module_bindings";
 import type { EventLog, Mission, Player } from "../module_bindings/types";
+import {
+  formatSpacetimeConnectionError,
+  logSpacetimeConfig,
+  logSpacetimeConnectionError,
+  resolveSpacetimeConfig,
+  type SpacetimeConfig,
+} from "./spacetimeConfig";
 
 const TOKEN_KEY = "escape_orbit_token";
-const URI = import.meta.env.VITE_SPACETIMEDB_URI ?? "ws://127.0.0.1:3000";
-const DATABASE =
-  import.meta.env.VITE_SPACETIMEDB_DATABASE ?? "escapeorbitdev";
 
 export type EscapeOrbitDbState = {
   connected: boolean;
@@ -72,10 +76,22 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
   }, []);
 
   useEffect(() => {
+    const resolved = resolveSpacetimeConfig();
+    if (!resolved.ok) {
+      console.error("[Escape Orbit] SpacetimeDB config error:", resolved.error);
+      setConnecting(false);
+      setConnected(false);
+      setError(resolved.error);
+      return;
+    }
+
+    const config: SpacetimeConfig = resolved.config;
+    logSpacetimeConfig(config);
+
     const token = localStorage.getItem(TOKEN_KEY) ?? undefined;
     const conn = DbConnection.builder()
-      .withUri(URI)
-      .withDatabaseName(DATABASE)
+      .withUri(config.uri)
+      .withDatabaseName(config.database)
       .withToken(token)
       .onConnect((connection, id, newToken) => {
         localStorage.setItem(TOKEN_KEY, newToken);
@@ -84,6 +100,11 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
         setConnected(true);
         setConnecting(false);
         setError(null);
+        console.info("[Escape Orbit] SpacetimeDB connected", {
+          host: config.host,
+          database: config.database,
+          identity: id.toHexString(),
+        });
 
         connection.subscriptionBuilder()
           .onApplied(() => refresh(connection))
@@ -101,9 +122,11 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
         connection.db.event_log.onDelete(sync);
       })
       .onConnectError((_ctx, err) => {
+        const message = err.message ?? "Failed to connect to SpacetimeDB";
+        logSpacetimeConnectionError(config, message, err);
         setConnecting(false);
         setConnected(false);
-        setError(err.message ?? "Failed to connect to SpacetimeDB");
+        setError(formatSpacetimeConnectionError(config, message));
       })
       .onDisconnect(() => {
         setConnected(false);
