@@ -1,0 +1,10 @@
+{
+  "database": "escape-orbit",
+  "module-path": "./spacetimedb",
+  "generate": [
+    { "language": "typescript", "out-dir": "./src/module_bindings" }
+  ],
+  "dev": {
+    "run": "npm run dev"
+  }
+}
