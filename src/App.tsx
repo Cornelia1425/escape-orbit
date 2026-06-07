@@ -3,12 +3,13 @@ import LandingScreen from "./components/LandingScreen";
 import UniverseScene from "./components/UniverseScene";
 import MissionPanel from "./components/MissionPanel";
 import EventFeed from "./components/EventFeed";
+import StarNavigationMap from "./components/StarNavigationMap";
 import { useEscapeOrbitDb } from "./spacetime/useEscapeOrbitDb";
 import {
   dbMissionToUiMission,
   getActiveLocalDbMission,
   getLatestLocalDbMission,
-  getRemoteFlyingMissions,
+  getRemotePlayerPresences,
   timestampToMs,
 } from "./spacetime/missionUtils";
 import type { Mission, FakePlayer, EventEntry, StarReward } from "./types";
@@ -69,10 +70,12 @@ export default function App() {
     return dbMissionToUiMission(localDbMission, missionDismissed, tick);
   }, [db.connected, db.identity, db.playerName, localDbMission, missionDismissed, tick]);
 
-  const remoteFlyingMissions = useMemo(() => {
-    if (!db.connected || !db.identity) return [];
-    return getRemoteFlyingMissions(db.missions, db.identity);
-  }, [db.connected, db.identity, db.missions]);
+  const remotePlayerPresences = useMemo(() => {
+    if (!db.connected) return [];
+    return getRemotePlayerPresences(db.players, db.missions, db.identity);
+  }, [db.connected, db.players, db.missions, db.identity]);
+
+  const onlinePilotCount = db.connected ? db.players.length : 0;
 
   const events: EventEntry[] = useMemo(() => {
     if (!db.connected || db.events.length === 0) return [];
@@ -203,44 +206,57 @@ export default function App() {
       <UniverseScene
         mission={mission}
         fakePlayers={fakePlayers}
-        remoteFlyingMissions={remoteFlyingMissions}
+        remotePlayerPresences={remotePlayerPresences}
         useRemoteShips={useRemoteShips}
         stars={stars}
         onFakePlayersUpdate={setFakePlayers}
-      />
+        >
+        <StarNavigationMap
+          progress={mission.progress}
+          position={[0, 1.04, -0.32]}
+          scale={0.95}
+          compact
+        />
+      </UniverseScene>
 
       <div style={{
         position: "fixed",
-        top: "24px",
-        left: "28px",
-        zIndex: 50,
+        top: "22px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 60,
         pointerEvents: "none",
+        minWidth: "220px",
+        padding: "8px 10px",
+        background: "rgba(3,8,26,0.12)",
+        borderLeft: "1px solid rgba(100,220,255,0.16)",
+        boxShadow: "0 0 20px rgba(42,160,255,0.12)",
       }}>
         <div style={{
           fontFamily: "'Cormorant Garamond', serif",
-          fontSize: "20px",
+          fontSize: "16px",
           fontWeight: 300,
-          color: "rgba(180,200,255,0.6)",
+          color: "rgba(185,235,255,0.62)",
           letterSpacing: "0.2em",
         }}>
           ESCAPE ORBIT
         </div>
         <div style={{
           fontFamily: "'DM Mono', monospace",
-          fontSize: "9px",
-          color: db.connected ? "rgba(100,200,140,0.55)" : "rgba(200,100,100,0.55)",
+          fontSize: "8px",
+          color: db.connected ? "rgba(100,200,140,0.6)" : "rgba(200,100,100,0.6)",
           letterSpacing: "0.15em",
           marginTop: "4px",
         }}>
           {db.connected
-            ? `◦ LIVE · ${db.playerName ?? "PILOT"} ◦`
+            ? `◦ LIVE · ${onlinePilotCount} PILOT${onlinePilotCount === 1 ? "" : "S"} · ${db.playerName ?? "YOU"} ◦`
             : "◦ OFFLINE · FAKE SHIPS ◦"}
         </div>
         {focusGuardNotice && (
           <div style={{
             fontFamily: "'DM Mono', monospace",
             fontSize: "9px",
-            color: "rgba(255,180,100,0.75)",
+            color: "rgba(255,180,100,0.78)",
             letterSpacing: "0.08em",
             marginTop: "8px",
             maxWidth: "220px",
@@ -251,18 +267,31 @@ export default function App() {
         )}
       </div>
 
-      <MissionPanel
-        mission={mission}
-        playerName={db.playerName ?? ""}
-        connected={db.connected}
-        remainingSeconds={remainingSeconds}
-        onLaunch={handleLaunch}
-        onComplete={handleComplete}
-        onFail={handleFail}
-        onReset={handleReset}
-      />
-
-      <EventFeed events={events} />
+      <div style={{
+        position: "fixed",
+        bottom: "24px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 60,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        gap: "16px",
+        width: "min(760px, calc(100vw - 32px))",
+      }}>
+        <EventFeed events={events} embedded />
+        <MissionPanel
+          mission={mission}
+          playerName={db.playerName ?? ""}
+          connected={db.connected}
+          remainingSeconds={remainingSeconds}
+          onLaunch={handleLaunch}
+          onComplete={handleComplete}
+          onFail={handleFail}
+          onReset={handleReset}
+          embedded
+        />
+      </div>
     </div>
   );
 }

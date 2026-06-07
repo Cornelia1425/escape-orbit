@@ -10,6 +10,7 @@ interface MissionPanelProps {
   onComplete: () => void;
   onFail: () => void;
   onReset: () => void;
+  embedded?: boolean;
 }
 
 function formatTime(seconds: number): string {
@@ -49,6 +50,7 @@ export default function MissionPanel({
   onComplete,
   onFail,
   onReset,
+  embedded = false,
 }: MissionPanelProps) {
   const [task, setTask] = useState("");
   const [duration, setDuration] = useState<"full" | "demo">("demo");
@@ -91,27 +93,34 @@ export default function MissionPanel({
 
   return (
     <div style={{
-      position: "fixed",
-      top: "50%",
-      right: "28px",
-      transform: "translateY(-50%)",
-      width: "280px",
-      background: "rgba(4,8,28,0.85)",
-      backdropFilter: "blur(16px)",
-      border: "1px solid rgba(80,120,200,0.18)",
-      padding: "28px 24px",
+      position: embedded ? "relative" : "fixed",
+      bottom: embedded ? undefined : "24px",
+      right: embedded ? undefined : "28px",
+      width: embedded ? "222px" : "280px",
+      maxHeight: embedded ? "330px" : "calc(100vh - 48px)",
+      overflowY: "auto",
+      background: embedded
+        ? "linear-gradient(180deg, rgba(10,28,62,0.58), rgba(2,8,24,0.42)), repeating-linear-gradient(0deg, rgba(120,190,255,0.07) 0 1px, transparent 1px 7px)"
+        : "rgba(4,8,28,0.85)",
+      backdropFilter: embedded ? "blur(8px)" : "blur(16px)",
+      border: embedded ? "1px solid rgba(110,210,255,0.34)" : "1px solid rgba(80,120,200,0.18)",
+      borderRadius: embedded ? "2px" : undefined,
+      padding: embedded ? "14px 14px" : "24px 22px",
       zIndex: 50,
-      boxShadow: "0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(100,140,255,0.08)",
+      boxShadow: embedded
+        ? "0 0 26px rgba(42,160,255,0.24), inset 0 0 18px rgba(80,180,255,0.12), inset 0 1px 0 rgba(180,230,255,0.24)"
+        : "0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(100,140,255,0.08)",
     }}>
       <div style={{
         fontFamily: "'Cormorant Garamond', serif",
-        fontSize: "18px",
+        fontSize: embedded ? "14px" : "18px",
         fontWeight: 300,
-        color: "rgba(200,220,255,0.9)",
-        letterSpacing: "0.1em",
-        marginBottom: "24px",
-        borderBottom: "1px solid rgba(80,120,200,0.15)",
-        paddingBottom: "16px",
+        color: embedded ? "rgba(190,235,255,0.92)" : "rgba(200,220,255,0.9)",
+        letterSpacing: embedded ? "0.16em" : "0.1em",
+        marginBottom: embedded ? "12px" : "20px",
+        borderBottom: embedded ? "1px solid rgba(110,210,255,0.2)" : "1px solid rgba(80,120,200,0.15)",
+        paddingBottom: embedded ? "9px" : "14px",
+        textShadow: embedded ? "0 0 12px rgba(100,210,255,0.36)" : undefined,
       }}>
         Mission Control
       </div>

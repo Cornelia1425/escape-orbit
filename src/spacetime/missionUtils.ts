@@ -1,5 +1,5 @@
 import type { Identity } from "spacetimedb";
-import type { Mission as DbMission } from "../module_bindings/types";
+import type { Mission as DbMission, Player } from "../module_bindings/types";
 import type { Mission, MissionStatus } from "../types";
 
 const LANES = [-2, -1, -1.5, 1, 2];
@@ -42,6 +42,67 @@ export function getActiveLocalDbMission(
   return missions
     .filter((m) => m.playerIdentity.isEqual(identity) && m.status === "flying")
     .sort((a, b) => Number(b.id - a.id))[0];
+}
+
+export type RemotePlayerPresence = {
+  identityHex: string;
+  name: string;
+  laneY: number;
+  status: "idle" | "flying";
+  startedAtMs: number | null;
+  durationSeconds: number;
+  missionId: string | null;
+};
+
+export function idleProgressForIdentity(identityHex: string): number {
+  let hash = 0;
+  for (let i = 0; i < identityHex.length; i++) {
+    hash = (hash * 31 + identityHex.charCodeAt(i)) | 0;
+  }
+  return 0.05 + (Math.abs(hash) % 15) / 100;
+}
+
+export function getRemotePlayerPresences(
+  players: Player[],
+  missions: DbMission[],
+  identity: Identity | null,
+): RemotePlayerPresence[] {
+  const flyingByIdentity = new Map<string, DbMission>();
+  for (const mission of missions) {
+    if (mission.status === "flying") {
+      flyingByIdentity.set(mission.playerIdentity.toHexString(), mission);
+    }
+  }
+
+  return players
+    .filter((player) => identity === null || !player.identity.isEqual(identity))
+    .map((player) => {
+      const identityHex = player.identity.toHexString();
+      const laneY = laneForKey(identityHex);
+      const flying = flyingByIdentity.get(identityHex);
+
+      if (flying) {
+        return {
+          identityHex,
+          name: player.name,
+          laneY,
+          status: "flying" as const,
+          startedAtMs: timestampToMs(flying.startedAt),
+          durationSeconds: flying.durationSeconds,
+          missionId: flying.id.toString(),
+        };
+      }
+
+      return {
+        identityHex,
+        name: player.name,
+        laneY,
+        status: "idle" as const,
+        startedAtMs: null,
+        durationSeconds: 0,
+        missionId: null,
+      };
+    });
 }
 
 export function getRemoteFlyingMissions(

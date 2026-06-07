@@ -14,6 +14,7 @@ spacetime.local.json
 spacetime.*.local.json
 dist-ssr
 *.local
+.env
 
 # Editor directories and files
 .vscode/*

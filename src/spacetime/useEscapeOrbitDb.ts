@@ -15,6 +15,23 @@ import {
 
 const TOKEN_KEY = "escape_orbit_token";
 
+/** Per-tab storage so each browser tab gets its own SpacetimeDB identity. */
+function readAuthToken(): string | undefined {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeAuthToken(token: string) {
+  try {
+    sessionStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    // sessionStorage unavailable
+  }
+}
+
 export type EscapeOrbitDbState = {
   connected: boolean;
   connecting: boolean;
@@ -79,22 +96,24 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
     const resolved = resolveSpacetimeConfig();
     if (!resolved.ok) {
       console.error("[Escape Orbit] SpacetimeDB config error:", resolved.error);
-      setConnecting(false);
-      setConnected(false);
-      setError(resolved.error);
+      queueMicrotask(() => {
+        setConnecting(false);
+        setConnected(false);
+        setError(resolved.error);
+      });
       return;
     }
 
     const config: SpacetimeConfig = resolved.config;
     logSpacetimeConfig(config);
 
-    const token = localStorage.getItem(TOKEN_KEY) ?? undefined;
+    const token = readAuthToken();
     const conn = DbConnection.builder()
       .withUri(config.uri)
       .withDatabaseName(config.database)
       .withToken(token)
       .onConnect((connection, id, newToken) => {
-        localStorage.setItem(TOKEN_KEY, newToken);
+        writeAuthToken(newToken);
         identityRef.current = id;
         setIdentity(id);
         setConnected(true);

@@ -1,31 +1,34 @@
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
+import type { ReactNode } from "react";
 import BlackHole from "./BlackHole";
 import TargetGalaxy from "./TargetGalaxy";
 import Ship from "./Ship";
 import FakePlayerShips from "./FakePlayerShips";
-import RemoteMissionShips from "./RemoteMissionShips";
+import RemotePlayerShips from "./RemotePlayerShips";
 import StarReward from "./StarReward";
 import FlightPath from "./FlightPath";
 import type { Mission, FakePlayer, StarReward as StarRewardType } from "../types";
-import type { Mission as DbMission } from "../module_bindings/types";
+import type { RemotePlayerPresence } from "../spacetime/missionUtils";
 
 interface UniverseSceneProps {
   mission: Mission;
   fakePlayers: FakePlayer[];
-  remoteFlyingMissions: DbMission[];
+  remotePlayerPresences: RemotePlayerPresence[];
   useRemoteShips: boolean;
   stars: StarRewardType[];
   onFakePlayersUpdate: (players: FakePlayer[]) => void;
+  children?: ReactNode;
 }
 
 export default function UniverseScene({
   mission,
   fakePlayers,
-  remoteFlyingMissions,
+  remotePlayerPresences,
   useRemoteShips,
   stars,
   onFakePlayersUpdate,
+  children,
 }: UniverseSceneProps) {
   const isCompleted = mission.status === "completed";
   const isFailed = mission.status === "failed";
@@ -33,7 +36,8 @@ export default function UniverseScene({
   const shipX = -5 + mission.progress * 10;
   const playerPos: [number, number, number] = [shipX, 0, 0];
 
-  const showPlayerShip = mission.status !== "idle";
+  const showPlayerMissionShip = mission.status !== "idle";
+  const showLocalIdleShip = useRemoteShips && mission.status === "idle" && !!mission.playerName;
 
   return (
     <div style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}>
@@ -50,7 +54,7 @@ export default function UniverseScene({
         <BlackHole pulsing={isFailed} />
         <TargetGalaxy glowing={isCompleted} />
 
-        {showPlayerShip && (
+        {showPlayerMissionShip && (
           <FlightPath progress={mission.progress} laneY={0} />
         )}
 
@@ -58,7 +62,7 @@ export default function UniverseScene({
           <FlightPath key={p.name} progress={p.progress} laneY={p.laneY} />
         ))}
 
-        {showPlayerShip && (
+        {showPlayerMissionShip && (
           <Ship
             position={playerPos}
             color="#ffffff"
@@ -69,13 +73,24 @@ export default function UniverseScene({
           />
         )}
 
+        {showLocalIdleShip && (
+          <Ship
+            position={[-4.7, 0, 0]}
+            color="#ffffff"
+            label={mission.playerName}
+            showLabel
+            isPlayer
+          />
+        )}
+
         {useRemoteShips ? (
-          <RemoteMissionShips missions={remoteFlyingMissions} />
+          <RemotePlayerShips presences={remotePlayerPresences} />
         ) : (
           <FakePlayerShips players={fakePlayers} onUpdate={onFakePlayersUpdate} />
         )}
 
         <StarReward stars={stars} />
+        {children}
       </Canvas>
     </div>
   );
