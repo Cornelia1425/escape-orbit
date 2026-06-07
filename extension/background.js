@@ -2,11 +2,18 @@ const INSTAGRAM_RULE_ID = 1;
 const ESCAPE_ORBIT_RULE_IDS = [1, 2, 3, 99, 100];
 const STORAGE_KEY = "focusMode";
 const SOURCE_KEY = "focusSource";
+const MISSION_LEASE_UNTIL_KEY = "missionFocusLeaseUntil";
+const MISSION_LEASE_MS = 45_000;
 const BLOCKED_PAGE = "/blocked.html";
 const INSTAGRAM_HOSTS = new Set(["instagram.com", "www.instagram.com"]);
 const ESCAPE_ORBIT_TAB_URLS = [
+  "http://localhost:5173/*",
   "http://localhost:5174/*",
+  "http://localhost:5175/*",
+  "http://127.0.0.1:5173/*",
   "http://127.0.0.1:5174/*",
+  "http://127.0.0.1:5175/*",
+  "https://escape-orbit.vercel.app/*",
 ];
 
 const pendingRedirects = new Set();
@@ -52,6 +59,11 @@ function hasInstagramRule(rules) {
   return Array.isArray(rules) && rules.some((rule) => rule.id === INSTAGRAM_RULE_ID);
 }
 
+function isInstagramRule(rule) {
+  const domains = rule?.condition?.requestDomains ?? rule?.condition?.domains ?? [];
+  return domains.some((domain) => INSTAGRAM_HOSTS.has(domain));
+}
+
 async function getDynamicRulesSafe() {
   const rules = await chrome.declarativeNetRequest.getDynamicRules();
   logLastError("getDynamicRules");
@@ -88,8 +100,14 @@ function updateFocusBadge(enabled) {
 }
 
 async function clearEscapeOrbitRules(context) {
+  const rules = await getDynamicRulesSafe();
+  const instagramRuleIds = rules
+    .filter(isInstagramRule)
+    .map((rule) => rule.id);
+  const removeRuleIds = [...new Set([...ESCAPE_ORBIT_RULE_IDS, ...instagramRuleIds])];
+
   await updateDynamicRulesSafe(
-    { removeRuleIds: ESCAPE_ORBIT_RULE_IDS },
+    { removeRuleIds },
     context,
   );
 }
@@ -97,7 +115,11 @@ async function clearEscapeOrbitRules(context) {
 async function getBlockingState() {
   let rules = await getDynamicRulesSafe();
   let hasRule = hasInstagramRule(rules);
-  const storage = await chrome.storage.local.get([STORAGE_KEY, SOURCE_KEY]);
+  const storage = await chrome.storage.local.get([
+    STORAGE_KEY,
+    SOURCE_KEY,
+    MISSION_LEASE_UNTIL_KEY,
+  ]);
 
   if (!hasRule && Boolean(storage[STORAGE_KEY])) {
     await chrome.storage.local.set({ [STORAGE_KEY]: false, [SOURCE_KEY]: null });
@@ -107,6 +129,16 @@ async function getBlockingState() {
 
   if (hasRule && storage[SOURCE_KEY] === "mission" && !(await isEscapeOrbitAppOpen())) {
     console.log("[Escape Orbit Focus] Escape Orbit tab closed — disabling mission focus guard");
+    await disableFocusMode();
+    hasRule = false;
+  }
+
+  if (
+    hasRule &&
+    storage[SOURCE_KEY] === "mission" &&
+    Number(storage[MISSION_LEASE_UNTIL_KEY] ?? 0) < Date.now()
+  ) {
+    console.log("[Escape Orbit Focus] Mission focus lease expired — disabling focus guard");
     await disableFocusMode();
     hasRule = false;
   }
@@ -237,7 +269,11 @@ async function enableFocusMode(source = "manual") {
     throw new Error(`INSTAGRAM_RULE_ID ${INSTAGRAM_RULE_ID} missing after updateDynamicRules`);
   }
 
-  await chrome.storage.local.set({ [STORAGE_KEY]: true, [SOURCE_KEY]: source });
+  await chrome.storage.local.set({
+    [STORAGE_KEY]: true,
+    [SOURCE_KEY]: source,
+    [MISSION_LEASE_UNTIL_KEY]: source === "mission" ? Date.now() + MISSION_LEASE_MS : null,
+  });
   await redirectAllInstagramTabs();
   updateFocusBadge(true);
 }
@@ -246,14 +282,19 @@ async function disableFocusMode() {
   console.log("[Escape Orbit Focus] disableFocusMode()");
 
   await clearEscapeOrbitRules("disableFocusMode.clearEscapeOrbitRules");
-  await chrome.storage.local.set({ [STORAGE_KEY]: false, [SOURCE_KEY]: null });
+  await chrome.storage.local.set({
+    [STORAGE_KEY]: false,
+    [SOURCE_KEY]: null,
+    [MISSION_LEASE_UNTIL_KEY]: null,
+  });
   updateFocusBadge(false);
 
   const rules = await getDynamicRulesSafe();
   console.log("[Escape Orbit Focus] after disable — getDynamicRules():", rules);
 
-  if (rules.length > 0) {
-    throw new Error(`Expected 0 active rules, found ${rules.length}`);
+  const activeInstagramRules = rules.filter(isInstagramRule);
+  if (activeInstagramRules.length > 0) {
+    throw new Error(`Expected 0 active Instagram rules, found ${activeInstagramRules.length}`);
   }
 }
 
@@ -363,8 +404,7 @@ installMessageListener(chrome.runtime.onMessage, "internal");
 installMessageListener(chrome.runtime.onMessageExternal, "external");
 
 async function syncFocusModeFromStorage() {
-  const { blocking } = await getBlockingState();
-  updateFocusBadge(blocking);
+  await disableFocusMode();
 }
 
 async function resetFocusModeOnLifecycleEvent() {

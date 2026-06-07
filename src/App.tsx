@@ -46,6 +46,7 @@ export default function App() {
 
   const db = useEscapeOrbitDb();
   const rafRef = useRef<number | null>(null);
+  const missionStartedThisSessionRef = useRef(false);
 
   const localDbMission = useMemo(() => {
     if (!db.identity) return undefined;
@@ -101,14 +102,38 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (mission.status === "flying" || mission.status === "awaiting_result") {
-      enableFocusGuard().then((result) => {
+    if (mission.status !== "flying") {
+      missionStartedThisSessionRef.current = false;
+      disableFocusGuard().then((result) => {
         setFocusGuardNotice(getFocusGuardNotice(result));
       });
       return;
     }
 
-    disableFocusGuard();
+    // Don't auto-enable for stale flying missions from a previous session.
+    // Only maintain focus guard if the user explicitly launched a mission
+    // via handleLaunch in this session.
+    if (!missionStartedThisSessionRef.current) {
+      return;
+    }
+
+    let active = true;
+
+    const refreshLease = () => {
+      enableFocusGuard().then((result) => {
+        if (active) {
+          setFocusGuardNotice(getFocusGuardNotice(result));
+        }
+      });
+    };
+
+    const heartbeatId = window.setInterval(refreshLease, 15_000);
+
+    return () => {
+      active = false;
+      window.clearInterval(heartbeatId);
+      disableFocusGuard();
+    };
   }, [mission.status]);
 
   useEffect(() => {
@@ -120,8 +145,8 @@ export default function App() {
     return () => window.removeEventListener("pagehide", onPageHide);
   }, []);
 
-  const handleJoin = useCallback((name: string) => {
-    db.joinWorld(name);
+  const handleJoin = useCallback(async (name: string) => {
+    await db.joinWorld(name);
     setShowLanding(false);
     setMissionDismissed(false);
   }, [db]);
@@ -129,6 +154,7 @@ export default function App() {
   const handleLaunch = useCallback(async (task: string, duration: number) => {
     if (!db.connected) return;
     setMissionDismissed(false);
+    missionStartedThisSessionRef.current = true;
     db.startMission(task, duration);
 
     const result = await enableFocusGuard();
@@ -177,10 +203,13 @@ export default function App() {
     return new URLSearchParams(window.location.search).get("blocked") === "instagram";
   }, []);
 
-  if (showLanding) {
+  const shouldShowLanding = showLanding || !db.playerName;
+
+  if (shouldShowLanding) {
     return (
       <LandingScreen
         onJoin={handleJoin}
+        takenNames={db.players.map((player) => player.name)}
         connecting={db.connecting}
         connected={db.connected}
         error={db.error}
