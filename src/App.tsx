@@ -104,9 +104,8 @@ export default function App() {
   useEffect(() => {
     if (mission.status !== "flying") {
       missionStartedThisSessionRef.current = false;
-      disableFocusGuard().then((result) => {
-        setFocusGuardNotice(getFocusGuardNotice(result));
-      });
+      disableFocusGuard();
+      setFocusGuardNotice(null);
       return;
     }
 
