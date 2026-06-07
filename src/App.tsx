@@ -16,7 +16,6 @@ import type { Mission, FakePlayer, EventEntry, StarReward } from "./types";
 import {
   disableFocusGuard,
   enableFocusGuard,
-  getFocusGuardNotice,
 } from "./extension/focusExtension";
 
 const FAKE_PLAYERS: FakePlayer[] = [
@@ -42,11 +41,9 @@ export default function App() {
   const [fakePlayers, setFakePlayers] = useState<FakePlayer[]>(FAKE_PLAYERS);
   const [stars, setStars] = useState<StarReward[]>([]);
   const [tick, setTick] = useState(0);
-  const [focusGuardNotice, setFocusGuardNotice] = useState<string | null>(null);
 
   const db = useEscapeOrbitDb();
   const rafRef = useRef<number | null>(null);
-  const missionStartedThisSessionRef = useRef(false);
 
   const localDbMission = useMemo(() => {
     if (!db.identity) return undefined;
@@ -103,33 +100,14 @@ export default function App() {
 
   useEffect(() => {
     if (mission.status !== "flying") {
-      missionStartedThisSessionRef.current = false;
       disableFocusGuard();
-      setFocusGuardNotice(null);
       return;
     }
 
-    // Don't auto-enable for stale flying missions from a previous session.
-    // Only maintain focus guard if the user explicitly launched a mission
-    // via handleLaunch in this session.
-    if (!missionStartedThisSessionRef.current) {
-      return;
-    }
-
-    let active = true;
-
-    const refreshLease = () => {
-      enableFocusGuard().then((result) => {
-        if (active) {
-          setFocusGuardNotice(getFocusGuardNotice(result));
-        }
-      });
-    };
-
-    const heartbeatId = window.setInterval(refreshLease, 15_000);
+    enableFocusGuard();
+    const heartbeatId = window.setInterval(enableFocusGuard, 15_000);
 
     return () => {
-      active = false;
       window.clearInterval(heartbeatId);
       disableFocusGuard();
     };
@@ -153,19 +131,14 @@ export default function App() {
   const handleLaunch = useCallback(async (task: string, duration: number) => {
     if (!db.connected) return;
     setMissionDismissed(false);
-    missionStartedThisSessionRef.current = true;
     db.startMission(task, duration);
-
-    const result = await enableFocusGuard();
-    setFocusGuardNotice(getFocusGuardNotice(result));
+    enableFocusGuard();
   }, [db]);
 
   const handleComplete = useCallback(async () => {
     if (!mission.id) return;
     db.completeMission(mission.id);
-
-    const result = await disableFocusGuard();
-    setFocusGuardNotice(getFocusGuardNotice(result));
+    disableFocusGuard();
 
     const task = mission.taskText;
     const angle = Math.random() * Math.PI * 2;
@@ -184,18 +157,15 @@ export default function App() {
     ]);
   }, [db, mission.id, mission.taskText]);
 
-  const handleFail = useCallback(async () => {
+  const handleFail = useCallback(() => {
     if (!mission.id) return;
     db.failMission(mission.id);
-
-    const result = await disableFocusGuard();
-    setFocusGuardNotice(getFocusGuardNotice(result));
+    disableFocusGuard();
   }, [db, mission.id]);
 
-  const handleReset = useCallback(async () => {
+  const handleReset = useCallback(() => {
     setMissionDismissed(true);
-    const result = await disableFocusGuard();
-    setFocusGuardNotice(getFocusGuardNotice(result));
+    disableFocusGuard();
   }, []);
 
   const blockedInstagram = useMemo(() => {
@@ -280,19 +250,6 @@ export default function App() {
             ? `◦ LIVE · ${onlinePilotCount} PILOT${onlinePilotCount === 1 ? "" : "S"} · ${db.playerName ?? "YOU"} ◦`
             : "◦ OFFLINE · FAKE SHIPS ◦"}
         </div>
-        {focusGuardNotice && (
-          <div style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: "9px",
-            color: "rgba(255,180,100,0.78)",
-            letterSpacing: "0.08em",
-            marginTop: "8px",
-            maxWidth: "220px",
-            lineHeight: 1.5,
-          }}>
-            {focusGuardNotice}
-          </div>
-        )}
       </div>
 
       <div style={{
