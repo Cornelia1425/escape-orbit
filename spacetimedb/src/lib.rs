@@ -1,4 +1,4 @@
-use spacetimedb::{Identity, ReducerContext, Table, Timestamp};
+use spacetimedb::{Identity, ReducerContext, ScheduleAt, Table, Timestamp};
 
 #[spacetimedb::table(accessor = player, public)]
 pub struct Player {
@@ -203,6 +203,55 @@ pub fn heartbeat(ctx: &ReducerContext) -> Result<(), String> {
 
     player.last_seen = ctx.timestamp;
     ctx.db.player().identity().update(player);
+    Ok(())
+}
+
+#[spacetimedb::table(accessor = cleanup_schedule, scheduled(cleanup_inactive_players))]
+pub struct CleanupSchedule {
+    #[primary_key]
+    #[auto_inc]
+    pub scheduled_id: u64,
+    pub scheduled_at: ScheduleAt,
+}
+
+#[spacetimedb::reducer(init)]
+pub fn init(ctx: &ReducerContext) {
+    ctx.db.cleanup_schedule().insert(CleanupSchedule {
+        scheduled_id: 0,
+        scheduled_at: ScheduleAt::Interval(std::time::Duration::from_secs(60 * 60).into()),
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn cleanup_inactive_players(ctx: &ReducerContext, _schedule: CleanupSchedule) -> Result<(), String> {
+    let twenty_four_hours_micros: i64 = 24 * 60 * 60 * 1_000_000;
+    let now_micros = ctx.timestamp.to_micros_since_unix_epoch();
+
+    let inactive: Vec<_> = ctx.db.player().iter()
+        .filter(|p| {
+            let last = p.last_seen.to_micros_since_unix_epoch();
+            last + twenty_four_hours_micros < now_micros as i64
+        })
+        .collect();
+
+    for player in inactive {
+        let missions: Vec<_> = ctx.db.mission().iter()
+            .filter(|m| m.player_identity == player.identity)
+            .collect();
+        for mission in missions {
+            ctx.db.mission().id().delete(&mission.id);
+        }
+
+        let events: Vec<_> = ctx.db.event_log().iter()
+            .filter(|e| e.player_identity == player.identity)
+            .collect();
+        for event in events {
+            ctx.db.event_log().id().delete(&event.id);
+        }
+
+        ctx.db.player().identity().delete(&player.identity);
+    }
+
     Ok(())
 }
 
