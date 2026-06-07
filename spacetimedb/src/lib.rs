@@ -34,6 +34,27 @@ pub struct EventLog {
     pub created_at: Timestamp,
 }
 
+#[spacetimedb::table(accessor = mission_photo, public)]
+pub struct MissionPhoto {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    pub mission_id: u64,
+    pub player_identity: Identity,
+    pub player_name: String,
+    pub image_url: String,
+    pub created_at: Timestamp,
+}
+
+#[spacetimedb::table(accessor = photo_transform, public)]
+pub struct PhotoTransform {
+    #[primary_key]
+    pub photo_id: u64,
+    pub pos_x: f32,
+    pub pos_y: f32,
+    pub size: f32,
+}
+
 #[spacetimedb::table(accessor = cleanup_schedule, scheduled(cleanup_inactive_players))]
 pub struct CleanupSchedule {
     #[primary_key]
@@ -108,6 +129,18 @@ pub fn cleanup_inactive_players(ctx: &ReducerContext, _schedule: CleanupSchedule
     let twenty_four_hours_micros: i64 = 24 * 60 * 60 * 1_000_000;
     let now_micros = ctx.timestamp.to_micros_since_unix_epoch();
 
+    // Delete photos older than 24 hours regardless of player activity
+    let old_photos: Vec<_> = ctx
+        .db
+        .mission_photo()
+        .iter()
+        .filter(|p| p.created_at.to_micros_since_unix_epoch() + twenty_four_hours_micros < now_micros)
+        .collect();
+    for photo in old_photos {
+        ctx.db.photo_transform().photo_id().delete(&photo.id);
+        ctx.db.mission_photo().id().delete(&photo.id);
+    }
+
     let inactive: Vec<_> = ctx
         .db
         .player()
@@ -136,9 +169,62 @@ pub fn cleanup_inactive_players(ctx: &ReducerContext, _schedule: CleanupSchedule
             ctx.db.event_log().id().delete(&event.id);
         }
 
+        let photos: Vec<_> = ctx
+            .db
+            .mission_photo()
+            .iter()
+            .filter(|p| p.player_identity == player.identity)
+            .collect();
+        for photo in photos {
+            ctx.db.photo_transform().photo_id().delete(&photo.id);
+            ctx.db.mission_photo().id().delete(&photo.id);
+        }
+
         ctx.db.player().identity().delete(&player.identity);
     }
 
+    Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn update_photo_transform(ctx: &ReducerContext, photo_id: u64, pos_x: f32, pos_y: f32, size: f32) -> Result<(), String> {
+    if ctx.db.mission_photo().id().find(&photo_id).is_none() {
+        return Err("Photo not found".into());
+    }
+    if let Some(mut t) = ctx.db.photo_transform().photo_id().find(&photo_id) {
+        t.pos_x = pos_x;
+        t.pos_y = pos_y;
+        t.size  = size;
+        ctx.db.photo_transform().photo_id().update(t);
+    } else {
+        ctx.db.photo_transform().insert(PhotoTransform { photo_id, pos_x, pos_y, size });
+    }
+    Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn upload_mission_photo(ctx: &ReducerContext, mission_id: u64, image_url: String) -> Result<(), String> {
+    let identity = ctx.sender();
+    let mission = ctx.db.mission().id().find(&mission_id).ok_or("Mission not found")?;
+    if mission.player_identity != identity {
+        return Err("Only the mission owner can upload a photo".into());
+    }
+    if mission.status != "completed" {
+        return Err("Mission must be completed to upload a photo".into());
+    }
+    let already_uploaded = ctx.db.mission_photo().iter().any(|p| p.mission_id == mission_id);
+    if already_uploaded {
+        return Err("Photo already uploaded for this mission".into());
+    }
+    let player_name = mission.player_name.clone();
+    ctx.db.mission_photo().insert(MissionPhoto {
+        id: 0,
+        mission_id,
+        player_identity: identity,
+        player_name,
+        image_url,
+        created_at: ctx.timestamp,
+    });
     Ok(())
 }
 
@@ -158,7 +244,7 @@ pub fn join_world(ctx: &ReducerContext, name: String) -> Result<(), String> {
         .db
         .player()
         .iter()
-        .any(|player| player.name.trim().to_lowercase() == normalized);
+        .any(|player| player.name.trim().to_lowercase() == normalized && player.identity != identity);
     if name_taken {
         return Err(format!("{trimmed} is already in the universe. Choose another name."));
     }
@@ -271,6 +357,30 @@ pub fn heartbeat(ctx: &ReducerContext) -> Result<(), String> {
 
     player.last_seen = ctx.timestamp;
     ctx.db.player().identity().update(player);
+    Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn dev_kick_others(ctx: &ReducerContext) -> Result<(), String> {
+    let me = ctx.sender();
+    let others: Vec<_> = ctx.db.player().iter()
+        .filter(|p| p.identity != me)
+        .collect();
+    for player in others {
+        let missions: Vec<_> = ctx.db.mission().iter()
+            .filter(|m| m.player_identity == player.identity)
+            .collect();
+        for m in missions { ctx.db.mission().id().delete(&m.id); }
+        let events: Vec<_> = ctx.db.event_log().iter()
+            .filter(|e| e.player_identity == player.identity)
+            .collect();
+        for e in events { ctx.db.event_log().id().delete(&e.id); }
+        let photos: Vec<_> = ctx.db.mission_photo().iter()
+            .filter(|p| p.player_identity == player.identity)
+            .collect();
+        for p in photos { ctx.db.mission_photo().id().delete(&p.id); }
+        ctx.db.player().identity().delete(&player.identity);
+    }
     Ok(())
 }
 
