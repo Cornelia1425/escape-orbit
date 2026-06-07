@@ -11,12 +11,16 @@ import DevClearWorldReducer from "../dev_clear_world_reducer";
 import FailMissionReducer from "../fail_mission_reducer";
 import HeartbeatReducer from "../heartbeat_reducer";
 import JoinWorldReducer from "../join_world_reducer";
+import RegisterCleanupScheduleReducer from "../register_cleanup_schedule_reducer";
 import StartMissionReducer from "../start_mission_reducer";
+import UploadMissionPhotoReducer from "../upload_mission_photo_reducer";
 
 export type CompleteMissionParams = __Infer<typeof CompleteMissionReducer>;
 export type DevClearWorldParams = __Infer<typeof DevClearWorldReducer>;
 export type FailMissionParams = __Infer<typeof FailMissionReducer>;
 export type HeartbeatParams = __Infer<typeof HeartbeatReducer>;
 export type JoinWorldParams = __Infer<typeof JoinWorldReducer>;
+export type RegisterCleanupScheduleParams = __Infer<typeof RegisterCleanupScheduleReducer>;
 export type StartMissionParams = __Infer<typeof StartMissionReducer>;
+export type UploadMissionPhotoParams = __Infer<typeof UploadMissionPhotoReducer>;
 

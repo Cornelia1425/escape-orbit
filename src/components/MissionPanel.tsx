@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Mission, MissionStatus } from "../types";
 
 interface MissionPanelProps {
@@ -10,6 +10,7 @@ interface MissionPanelProps {
   onComplete: () => void;
   onFail: () => void;
   onReset: () => void;
+  onUploadPhoto: (file: File) => Promise<void>;
   embedded?: boolean;
 }
 
@@ -50,10 +51,14 @@ export default function MissionPanel({
   onComplete,
   onFail,
   onReset,
+  onUploadPhoto,
   embedded = false,
 }: MissionPanelProps) {
   const [task, setTask] = useState("");
   const [duration, setDuration] = useState<"full" | "demo">("demo");
+  const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isIdle = mission.status === "idle";
   const isFlying = mission.status === "flying";
@@ -65,6 +70,19 @@ export default function MissionPanel({
     if (!task.trim() || !connected) return;
     onLaunch(task.trim(), duration === "full" ? 2400 : 30);
     setTask("");
+    setUploaded(false);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await onUploadPhoto(file);
+      setUploaded(true);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const inputStyle = {
@@ -313,6 +331,51 @@ export default function MissionPanel({
           }}>
             {mission.taskText}
           </div>
+
+          {mission.status === "completed" && (
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+              {uploaded ? (
+                <div style={{
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: "9px",
+                  color: "rgba(100,220,140,0.8)",
+                  letterSpacing: "0.1em",
+                  textAlign: "center",
+                  padding: "10px",
+                  border: "1px solid rgba(80,200,120,0.3)",
+                }}>
+                  ✓ Photo posted to the universe
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  style={{
+                    fontFamily: "'DM Mono', monospace",
+                    fontSize: "10px",
+                    letterSpacing: "0.12em",
+                    color: uploading ? "rgba(120,150,200,0.4)" : "rgba(140,200,255,0.8)",
+                    background: "rgba(40,100,180,0.08)",
+                    border: "1px solid rgba(80,160,255,0.3)",
+                    padding: "10px",
+                    cursor: uploading ? "not-allowed" : "pointer",
+                    textTransform: "uppercase",
+                    width: "100%",
+                  }}
+                >
+                  {uploading ? "Uploading..." : "↑ Upload Proof Photo"}
+                </button>
+              )}
+            </div>
+          )}
+
           <button
             onClick={onReset}
             style={{
@@ -326,7 +389,6 @@ export default function MissionPanel({
               cursor: "pointer",
               textTransform: "uppercase",
               transition: "all 0.2s",
-              marginTop: "8px",
             }}
           >
             ↺ Launch Again

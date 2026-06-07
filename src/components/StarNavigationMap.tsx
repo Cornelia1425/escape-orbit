@@ -60,8 +60,8 @@ function MapLabel({
         fontWeight: 700,
         lineHeight: 1.25,
         letterSpacing: "0.13em",
-        color: "rgba(230,255,252,0.94)",
-        textShadow: "0 0 10px rgba(120,255,245,0.75), 0 0 24px rgba(60,210,255,0.38)",
+        color: compact ? "rgba(230,255,252,0.94)" : "rgba(230,255,252,0.07)",
+        textShadow: compact ? "0 0 10px rgba(120,255,245,0.75), 0 0 24px rgba(60,210,255,0.38)" : "none",
         textTransform: "uppercase",
         whiteSpace: "pre-line",
       }}>
@@ -117,7 +117,7 @@ export default function StarNavigationMap({
       </mesh>
 
       <MapLabel position={[-5.5, 0.72, 0.05]} compact={compact}>
-        Earth
+        Black Hole
       </MapLabel>
       <MapLabel position={[-4.3, 0.82, 0.05]} compact={compact}>
         {"Proxima Centauri B\n4.2 LY"}

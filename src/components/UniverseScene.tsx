@@ -8,8 +8,11 @@ import FakePlayerShips from "./FakePlayerShips";
 import RemotePlayerShips from "./RemotePlayerShips";
 import StarReward from "./StarReward";
 import FlightPath from "./FlightPath";
+import MissionPhotoCards from "./MissionPhotoCards";
 import type { Mission, FakePlayer, StarReward as StarRewardType } from "../types";
 import type { RemotePlayerPresence } from "../spacetime/missionUtils";
+import type { MissionPhoto, PhotoTransform } from "../module_bindings/types";
+import type { Identity } from "spacetimedb";
 
 interface UniverseSceneProps {
   mission: Mission;
@@ -17,6 +20,10 @@ interface UniverseSceneProps {
   remotePlayerPresences: RemotePlayerPresence[];
   useRemoteShips: boolean;
   stars: StarRewardType[];
+  missionPhotos: MissionPhoto[];
+  photoTransforms: PhotoTransform[];
+  currentIdentity: Identity | null;
+  onUpdatePhotoTransform: (photoId: bigint, posX: number, posY: number, size: number) => void;
   onFakePlayersUpdate: (players: FakePlayer[]) => void;
   children?: ReactNode;
 }
@@ -27,6 +34,10 @@ export default function UniverseScene({
   remotePlayerPresences,
   useRemoteShips,
   stars,
+  missionPhotos,
+  photoTransforms,
+  currentIdentity,
+  onUpdatePhotoTransform,
   onFakePlayersUpdate,
   children,
 }: UniverseSceneProps) {
@@ -90,6 +101,7 @@ export default function UniverseScene({
         )}
 
         <StarReward stars={stars} />
+        <MissionPhotoCards photos={missionPhotos} transforms={photoTransforms} currentIdentity={currentIdentity} onUpdateTransform={onUpdatePhotoTransform} />
         {children}
       </Canvas>
     </div>

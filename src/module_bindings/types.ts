@@ -10,6 +10,12 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const CleanupSchedule = __t.object("CleanupSchedule", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+});
+export type CleanupSchedule = __Infer<typeof CleanupSchedule>;
+
 export const EventLog = __t.object("EventLog", {
   id: __t.u64(),
   playerIdentity: __t.identity(),
@@ -31,6 +37,25 @@ export const Mission = __t.object("Mission", {
   createdAt: __t.timestamp(),
 });
 export type Mission = __Infer<typeof Mission>;
+
+export const MissionPhoto = __t.object("MissionPhoto", {
+  id: __t.u64(),
+  missionId: __t.u64(),
+  playerIdentity: __t.identity(),
+  playerName: __t.string(),
+  imageUrl: __t.string(),
+  createdAt: __t.timestamp(),
+});
+
+export type MissionPhoto = __Infer<typeof MissionPhoto>;
+
+export const PhotoTransform = __t.object("PhotoTransform", {
+  photoId: __t.u64(),
+  posX: __t.f32(),
+  posY: __t.f32(),
+  size: __t.f32(),
+});
+export type PhotoTransform = __Infer<typeof PhotoTransform>;
 
 export const Player = __t.object("Player", {
   identity: __t.identity(),
