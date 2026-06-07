@@ -44,7 +44,7 @@ export default function Ship({
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Body: cylinder */}
+      {/* Body */}
       <mesh rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.08, 0.12, 0.35, 8]} />
         <meshStandardMaterial
@@ -56,7 +56,7 @@ export default function Ship({
         />
       </mesh>
 
-      {/* Nose: cone */}
+      {/* Nose */}
       <mesh position={[0.22, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
         <coneGeometry args={[0.08, 0.18, 8]} />
         <meshStandardMaterial
@@ -86,12 +86,10 @@ export default function Ship({
         <meshBasicMaterial color={failed ? "#ff4400" : "#ff8833"} transparent opacity={0.7} />
       </mesh>
 
-      {/* Player ship extra glow */}
       {isPlayer && (
         <pointLight color={color} intensity={0.6} distance={2} />
       )}
 
-      {/* Label */}
       {showLabel && label && (
         <Html position={[0, 0.28, 0]} center style={{ pointerEvents: "none" }}>
           <div style={{

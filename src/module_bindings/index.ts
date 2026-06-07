@@ -39,13 +39,18 @@ import DevClearWorldReducer from "./dev_clear_world_reducer";
 import FailMissionReducer from "./fail_mission_reducer";
 import HeartbeatReducer from "./heartbeat_reducer";
 import JoinWorldReducer from "./join_world_reducer";
+import RegisterCleanupScheduleReducer from "./register_cleanup_schedule_reducer";
 import StartMissionReducer from "./start_mission_reducer";
+import UploadMissionPhotoReducer from "./upload_mission_photo_reducer";
+import UpdatePhotoTransformReducer from "./update_photo_transform_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
 import EventLogRow from "./event_log_table";
 import MissionRow from "./mission_table";
+import MissionPhotoRow from "./mission_photo_table";
+import PhotoTransformRow from "./photo_transform_table";
 import PlayerRow from "./player_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -74,6 +79,28 @@ const tablesSchema = __schema({
       { name: 'mission_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, MissionRow),
+  mission_photo: __table({
+    name: 'mission_photo',
+    indexes: [
+      { accessor: 'id', name: 'mission_photo_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'mission_photo_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, MissionPhotoRow),
+  photo_transform: __table({
+    name: 'photo_transform',
+    indexes: [
+      { accessor: 'photoId', name: 'photo_transform_photo_id_idx_btree', algorithm: 'btree', columns: [
+        'photoId',
+      ] },
+    ],
+    constraints: [
+      { name: 'photo_transform_photo_id_key', constraint: 'unique', columns: ['photoId'] },
+    ],
+  }, PhotoTransformRow),
   player: __table({
     name: 'player',
     indexes: [
@@ -94,7 +121,10 @@ const reducersSchema = __reducers(
   __reducerSchema("fail_mission", FailMissionReducer),
   __reducerSchema("heartbeat", HeartbeatReducer),
   __reducerSchema("join_world", JoinWorldReducer),
+  __reducerSchema("register_cleanup_schedule", RegisterCleanupScheduleReducer),
   __reducerSchema("start_mission", StartMissionReducer),
+  __reducerSchema("upload_mission_photo", UploadMissionPhotoReducer),
+  __reducerSchema("update_photo_transform", UpdatePhotoTransformReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

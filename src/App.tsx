@@ -17,13 +17,14 @@ import {
   disableFocusGuard,
   enableFocusGuard,
 } from "./extension/focusExtension";
+import { uploadImageToCloudinary } from "./cloudinary";
 
 const FAKE_PLAYERS: FakePlayer[] = [
-  { name: "Nova",  progress: 0.22, laneY: -2,  speed: 0.012, status: "flying" },
-  { name: "Kai",   progress: 0.55, laneY: -1,  speed: 0.008, status: "flying" },
-  { name: "Mira",  progress: 0.38, laneY:  1,  speed: 0.010, status: "flying" },
-  { name: "Sol",   progress: 0.71, laneY:  2,  speed: 0.006, status: "flying" },
-  { name: "Echo",  progress: 0.09, laneY: -1.5, speed: 0.014, status: "flying" },
+  { name: "Alice", progress: 0.22, laneY: -2,   speed: 0.012, status: "flying" },
+  { name: "Bob",   progress: 0.55, laneY: -1,   speed: 0.008, status: "flying" },
+  { name: "Coby",  progress: 0.38, laneY:  1,   speed: 0.010, status: "flying" },
+  { name: "Dell",  progress: 0.71, laneY:  2,   speed: 0.006, status: "flying" },
+  { name: "Ellie", progress: 0.09, laneY: -1.5, speed: 0.014, status: "flying" },
 ];
 
 const INITIAL_MISSION: Mission = {
@@ -122,6 +123,12 @@ export default function App() {
     return () => window.removeEventListener("pagehide", onPageHide);
   }, []);
 
+  useEffect(() => {
+    if (db.connected && db.playerName) {
+      setShowLanding(false);
+    }
+  }, [db.connected, db.playerName]);
+
   const handleJoin = useCallback(async (name: string) => {
     await db.joinWorld(name);
     setShowLanding(false);
@@ -168,11 +175,21 @@ export default function App() {
     disableFocusGuard();
   }, []);
 
+  const handleUploadPhoto = useCallback(async (file: File) => {
+    if (!mission.id) return;
+    const url = await uploadImageToCloudinary(file);
+    db.uploadMissionPhoto(mission.id, url);
+  }, [db, mission.id]);
+
+  const handleUpdatePhotoTransform = useCallback((photoId: bigint, posX: number, posY: number, size: number) => {
+    db.updatePhotoTransform(photoId, posX, posY, size);
+  }, [db]);
+
   const blockedInstagram = useMemo(() => {
     return new URLSearchParams(window.location.search).get("blocked") === "instagram";
   }, []);
 
-  const shouldShowLanding = showLanding || !db.playerName;
+  const shouldShowLanding = showLanding;
 
   if (shouldShowLanding) {
     return (
@@ -207,6 +224,10 @@ export default function App() {
         remotePlayerPresences={remotePlayerPresences}
         useRemoteShips={useRemoteShips}
         stars={stars}
+        missionPhotos={db.missionPhotos}
+        photoTransforms={db.photoTransforms}
+        currentIdentity={db.identity}
+        onUpdatePhotoTransform={handleUpdatePhotoTransform}
         onFakePlayersUpdate={setFakePlayers}
         >
         <StarNavigationMap
@@ -274,6 +295,7 @@ export default function App() {
           onComplete={handleComplete}
           onFail={handleFail}
           onReset={handleReset}
+          onUploadPhoto={handleUploadPhoto}
           embedded
         />
       </div>

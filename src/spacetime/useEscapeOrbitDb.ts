@@ -4,7 +4,7 @@ import {
   DbConnection,
   tables,
 } from "../module_bindings";
-import type { EventLog, Mission, Player } from "../module_bindings/types";
+import type { EventLog, Mission, MissionPhoto, PhotoTransform, Player } from "../module_bindings/types";
 import {
   formatSpacetimeConnectionError,
   logSpacetimeConfig,
@@ -41,10 +41,14 @@ export type EscapeOrbitDbState = {
   players: Player[];
   missions: Mission[];
   events: EventLog[];
+  missionPhotos: MissionPhoto[];
+  photoTransforms: PhotoTransform[];
   joinWorld: (name: string) => Promise<void>;
   startMission: (taskText: string, durationSeconds: number) => void;
   completeMission: (missionId: bigint) => void;
   failMission: (missionId: bigint) => void;
+  uploadMissionPhoto: (missionId: bigint, imageUrl: string) => void;
+  updatePhotoTransform: (photoId: bigint, posX: number, posY: number, size: number) => void;
 };
 
 function syncTables(
@@ -53,15 +57,21 @@ function syncTables(
   setPlayers: (rows: Player[]) => void,
   setMissions: (rows: Mission[]) => void,
   setEvents: (rows: EventLog[]) => void,
+  setMissionPhotos: (rows: MissionPhoto[]) => void,
+  setPhotoTransforms: (rows: PhotoTransform[]) => void,
   setPlayerName: (name: string | null) => void,
 ) {
-  const playerRows = [...conn.db.player.iter()];
-  const missionRows = [...conn.db.mission.iter()];
-  const eventRows = [...conn.db.event_log.iter()];
+  const playerRows    = [...conn.db.player.iter()];
+  const missionRows   = [...conn.db.mission.iter()];
+  const eventRows     = [...conn.db.event_log.iter()];
+  const photoRows     = [...conn.db.mission_photo.iter()];
+  const transformRows = [...conn.db.photo_transform.iter()];
 
   setPlayers(playerRows);
   setMissions(missionRows);
   setEvents(eventRows);
+  setMissionPhotos(photoRows);
+  setPhotoTransforms(transformRows);
 
   if (localIdentity) {
     const localPlayer = playerRows.find((p) => p.identity.isEqual(localIdentity));
@@ -80,6 +90,8 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
   const [players, setPlayers] = useState<Player[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [events, setEvents] = useState<EventLog[]>([]);
+  const [missionPhotos, setMissionPhotos] = useState<MissionPhoto[]>([]);
+  const [photoTransforms, setPhotoTransforms] = useState<PhotoTransform[]>([]);
 
   const refresh = useCallback((conn: DbConnection) => {
     syncTables(
@@ -88,6 +100,8 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
       setPlayers,
       setMissions,
       setEvents,
+      setMissionPhotos,
+      setPhotoTransforms,
       setPlayerName,
     );
   }, []);
@@ -127,7 +141,7 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
 
         connection.subscriptionBuilder()
           .onApplied(() => refresh(connection))
-          .subscribe([tables.player, tables.mission, tables.event_log]);
+          .subscribe([tables.player, tables.mission, tables.event_log, tables.mission_photo, tables.photo_transform]);
 
         const sync = () => refresh(connection);
         connection.db.player.onInsert(sync);
@@ -139,9 +153,21 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
         connection.db.event_log.onInsert(sync);
         connection.db.event_log.onUpdate(sync);
         connection.db.event_log.onDelete(sync);
+        connection.db.mission_photo.onInsert(sync);
+        connection.db.mission_photo.onUpdate(sync);
+        connection.db.mission_photo.onDelete(sync);
+        connection.db.photo_transform.onInsert(sync);
+        connection.db.photo_transform.onUpdate(sync);
+        connection.db.photo_transform.onDelete(sync);
       })
       .onConnectError((_ctx, err) => {
         const message = err.message ?? "Failed to connect to SpacetimeDB";
+        if (message.includes("Unauthorized") || message.includes("401")) {
+          // Stale token from a different database — clear it and reload
+          try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+          window.location.reload();
+          return;
+        }
         logSpacetimeConnectionError(config, message, err);
         setConnecting(false);
         setConnected(false);
@@ -154,6 +180,15 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
       .build();
 
     connRef.current = conn;
+
+    // SpacetimeDB SDK adds many internal listeners per subscription; raise the cap to silence the warning.
+    try {
+      const socket = (conn as unknown as Record<string, unknown>)._socket
+        ?? (conn as unknown as Record<string, unknown>)._ws;
+      if (socket && typeof (socket as { setMaxListeners?: (n: number) => void }).setMaxListeners === "function") {
+        (socket as { setMaxListeners: (n: number) => void }).setMaxListeners(50);
+      }
+    } catch { /* ignore */ }
 
     return () => {
       conn.disconnect();
@@ -200,6 +235,14 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
     connRef.current?.reducers.failMission({ missionId });
   }, []);
 
+  const uploadMissionPhoto = useCallback((missionId: bigint, imageUrl: string) => {
+    connRef.current?.reducers.uploadMissionPhoto({ missionId, imageUrl });
+  }, []);
+
+  const updatePhotoTransform = useCallback((photoId: bigint, posX: number, posY: number, size: number) => {
+    connRef.current?.reducers.updatePhotoTransform({ photoId, posX, posY, size });
+  }, []);
+
   return {
     connected,
     connecting,
@@ -209,9 +252,13 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
     players,
     missions,
     events,
+    missionPhotos,
+    photoTransforms,
     joinWorld,
     startMission,
     completeMission,
     failMission,
+    uploadMissionPhoto,
+    updatePhotoTransform,
   };
 }
