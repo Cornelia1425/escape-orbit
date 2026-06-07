@@ -7,12 +7,14 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import CompleteMissionReducer from "../complete_mission_reducer";
+import DevClearWorldReducer from "../dev_clear_world_reducer";
 import FailMissionReducer from "../fail_mission_reducer";
 import HeartbeatReducer from "../heartbeat_reducer";
 import JoinWorldReducer from "../join_world_reducer";
 import StartMissionReducer from "../start_mission_reducer";
 
 export type CompleteMissionParams = __Infer<typeof CompleteMissionReducer>;
+export type DevClearWorldParams = __Infer<typeof DevClearWorldReducer>;
 export type FailMissionParams = __Infer<typeof FailMissionReducer>;
 export type HeartbeatParams = __Infer<typeof HeartbeatReducer>;
 export type JoinWorldParams = __Infer<typeof JoinWorldReducer>;

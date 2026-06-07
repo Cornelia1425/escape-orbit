@@ -41,7 +41,7 @@ export type EscapeOrbitDbState = {
   players: Player[];
   missions: Mission[];
   events: EventLog[];
-  joinWorld: (name: string) => void;
+  joinWorld: (name: string) => Promise<void>;
   startMission: (taskText: string, durationSeconds: number) => void;
   completeMission: (missionId: bigint) => void;
   failMission: (missionId: bigint) => void;
@@ -172,8 +172,20 @@ export function useEscapeOrbitDb(): EscapeOrbitDbState {
     return () => window.clearInterval(interval);
   }, [connected]);
 
-  const joinWorld = useCallback((name: string) => {
-    connRef.current?.reducers.joinWorld({ name });
+  const joinWorld = useCallback(async (name: string) => {
+    setError(null);
+    const conn = connRef.current;
+    if (!conn) {
+      throw new Error("Not connected to SpacetimeDB");
+    }
+
+    try {
+      await conn.reducers.joinWorld({ name });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not enter the universe";
+      setError(message);
+      throw err;
+    }
   }, []);
 
   const startMission = useCallback((taskText: string, durationSeconds: number) => {

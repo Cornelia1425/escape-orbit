@@ -4,7 +4,8 @@ import { Stars } from "@react-three/drei";
 import StarNavigationMap from "./StarNavigationMap";
 
 interface LandingScreenProps {
-  onJoin: (name: string) => void;
+  onJoin: (name: string) => Promise<void> | void;
+  takenNames: string[];
   connecting: boolean;
   connected: boolean;
   error: string | null;
@@ -13,17 +14,36 @@ interface LandingScreenProps {
 
 export default function LandingScreen({
   onJoin,
+  takenNames,
   connecting,
   connected,
   error,
   blockedInstagram = false,
 }: LandingScreenProps) {
   const [name, setName] = useState("");
+  const [joining, setJoining] = useState(false);
+  const trimmedName = name.trim();
+  const normalizedName = trimmedName.toLocaleLowerCase();
+  const hasWhitespace = /\s/.test(name);
+  const nameTaken = normalizedName.length > 0 && takenNames.some(
+    (takenName) => takenName.trim().toLocaleLowerCase() === normalizedName,
+  );
+  const nameError = hasWhitespace
+    ? "Pilot names cannot contain spaces."
+    : nameTaken
+      ? `"${trimmedName}" is already flying here. Choose another name.`
+      : null;
 
-  const handleSubmit = () => {
-    const trimmed = name.trim();
-    if (!trimmed || !connected) return;
-    onJoin(trimmed);
+  const handleSubmit = async () => {
+    if (!trimmedName || !connected || connecting || joining || nameTaken || hasWhitespace) return;
+    setJoining(true);
+    try {
+      await onJoin(trimmedName);
+    } catch {
+      // The database hook exposes the reducer message through `error`.
+    } finally {
+      setJoining(false);
+    }
   };
 
   return (
@@ -140,7 +160,9 @@ export default function LandingScreen({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleSubmit();
+            }}
             placeholder="your name"
             autoComplete="nickname"
             autoCapitalize="words"
@@ -164,22 +186,37 @@ export default function LandingScreen({
 
         <button
           onClick={handleSubmit}
-          disabled={!name.trim() || !connected || connecting}
+          disabled={!trimmedName || !connected || connecting || joining || nameTaken || hasWhitespace}
           style={{
             fontFamily: "'DM Mono', monospace",
             fontSize: "11px",
             letterSpacing: "0.2em",
-            color: name.trim() && connected ? "rgba(200,220,255,0.9)" : "rgba(120,150,200,0.4)",
+            color: trimmedName && connected && !connecting && !joining && !nameTaken && !hasWhitespace ? "rgba(200,220,255,0.9)" : "rgba(120,150,200,0.4)",
             background: "transparent",
-            border: `1px solid ${name.trim() && connected ? "rgba(100,140,255,0.4)" : "rgba(80,100,160,0.2)"}`,
+            border: `1px solid ${trimmedName && connected && !connecting && !joining && !nameTaken && !hasWhitespace ? "rgba(100,140,255,0.4)" : "rgba(80,100,160,0.2)"}`,
             padding: "12px 30px",
-            cursor: name.trim() && connected ? "pointer" : "not-allowed",
+            cursor: trimmedName && connected && !connecting && !joining && !nameTaken && !hasWhitespace ? "pointer" : "not-allowed",
             textTransform: "uppercase",
             transition: "all 0.3s ease",
           }}
         >
-          {connecting ? "Connecting..." : "Enter Universe"}
+          {connecting ? "Connecting..." : joining ? "Entering..." : "Enter Universe"}
         </button>
+
+        {nameError && (
+          <div style={{
+            marginTop: "14px",
+            fontFamily: "'DM Mono', monospace",
+            fontSize: "10px",
+            color: "rgba(255,190,120,0.88)",
+            maxWidth: "340px",
+            textAlign: "center",
+            lineHeight: 1.6,
+            letterSpacing: "0.05em",
+          }}>
+            {nameError}
+          </div>
+        )}
 
         {error && (
           <div style={{

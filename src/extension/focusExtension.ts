@@ -52,6 +52,16 @@ function resolveExtensionId(): string | undefined {
   if (fromEnv) return fromEnv;
 
   try {
+    const fromUrl = new URLSearchParams(window.location.search).get("extensionId")?.trim();
+    if (fromUrl) {
+      localStorage.setItem(EXTENSION_ID_STORAGE_KEY, fromUrl);
+      return fromUrl;
+    }
+  } catch {
+    // URL/localStorage may be unavailable in some contexts
+  }
+
+  try {
     const fromStorage = localStorage.getItem(EXTENSION_ID_STORAGE_KEY)?.trim();
     if (fromStorage) return fromStorage;
   } catch {

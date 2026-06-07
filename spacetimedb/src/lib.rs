@@ -81,6 +81,19 @@ pub fn join_world(ctx: &ReducerContext, name: String) -> Result<(), String> {
     if trimmed.is_empty() {
         return Err("Name cannot be empty".into());
     }
+    if trimmed.chars().any(char::is_whitespace) {
+        return Err("Name cannot contain spaces".into());
+    }
+
+    let normalized = trimmed.to_lowercase();
+    let name_taken = ctx
+        .db
+        .player()
+        .iter()
+        .any(|player| player.name.trim().to_lowercase() == normalized);
+    if name_taken {
+        return Err(format!("{trimmed} is already in the universe. Choose another name."));
+    }
 
     upsert_player(ctx, identity, trimmed.to_string());
     insert_event(
@@ -190,5 +203,22 @@ pub fn heartbeat(ctx: &ReducerContext) -> Result<(), String> {
 
     player.last_seen = ctx.timestamp;
     ctx.db.player().identity().update(player);
+    Ok(())
+}
+
+#[spacetimedb::reducer]
+pub fn dev_clear_world(ctx: &ReducerContext) -> Result<(), String> {
+    for mission in ctx.db.mission().iter() {
+        ctx.db.mission().id().delete(&mission.id);
+    }
+
+    for event in ctx.db.event_log().iter() {
+        ctx.db.event_log().id().delete(&event.id);
+    }
+
+    for player in ctx.db.player().iter() {
+        ctx.db.player().identity().delete(&player.identity);
+    }
+
     Ok(())
 }

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/SYR/.local/bin/spacetime sql *)",
+      "Bash(vercel --version)",
+      "Bash(npm run *)",
+      "Bash(npm i *)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit status)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit diff --stat)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit fetch origin)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit log --oneline origin/main..version3)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit log --oneline version3..origin/main)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit add extension/background.js extension/blocked.js extension/manifest.json src/App.tsx)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit commit -m ' *)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit diff)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}
