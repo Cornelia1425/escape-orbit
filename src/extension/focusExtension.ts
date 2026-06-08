@@ -147,6 +147,11 @@ export async function disableFocusGuard(): Promise<FocusGuardResult> {
   return sendExtensionMessage("DISABLE_FOCUS_MODE");
 }
 
+export async function checkExtensionInstalled(): Promise<boolean> {
+  const result = await sendExtensionMessage("GET_STATUS");
+  return result.connected;
+}
+
 export function getFocusGuardNotice(result: FocusGuardResult): string | null {
   if (result.connected && result.ok) {
     return null;
