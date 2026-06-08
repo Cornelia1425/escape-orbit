@@ -102,7 +102,7 @@ export default function GalaxyGuide() {
         ...posStyle,
         width: "220px",
         zIndex: 50,
-        background: "rgba(4,8,28,0.88)",
+        background: "rgba(4,8,28,0.45)",
         backdropFilter: "blur(16px)",
         border: isInstalled
           ? "1px solid rgba(80,220,140,0.3)"
