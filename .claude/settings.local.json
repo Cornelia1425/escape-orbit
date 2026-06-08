@@ -15,7 +15,10 @@
       "Bash(git -C /Users/SYR/dev/escape-orbit diff)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git -C /Users/SYR/dev/escape-orbit checkout main)",
+      "Bash(git merge *)",
+      "Bash(vercel env *)"
     ]
   }
 }
