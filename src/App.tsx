@@ -5,6 +5,7 @@ import MissionPanel from "./components/MissionPanel";
 import EventFeed from "./components/EventFeed";
 import StarNavigationMap from "./components/StarNavigationMap";
 import GalaxyGuide from "./components/GalaxyGuide";
+import DraggablePanel from "./components/DraggablePanel";
 import { useEscapeOrbitDb } from "./spacetime/useEscapeOrbitDb";
 import {
   dbMissionToUiMission,
@@ -241,54 +242,42 @@ export default function App() {
         />
       </UniverseScene>
 
-      <div style={{
-        position: "fixed",
-        top: "22px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 60,
-        pointerEvents: "none",
-        minWidth: "220px",
-        padding: "8px 10px",
-        background: "rgba(3,8,26,0.12)",
-        borderLeft: "1px solid rgba(100,220,255,0.16)",
-        boxShadow: "0 0 20px rgba(42,160,255,0.12)",
-      }}>
+      <DraggablePanel initialStyle={{ top: 22, left: "50%", transform: "translateX(-50%)" }}>
         <div style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: "16px",
-          fontWeight: 300,
-          color: "rgba(185,235,255,0.62)",
-          letterSpacing: "0.2em",
+          minWidth: "220px",
+          padding: "8px 10px",
+          background: "rgba(3,8,26,0.12)",
+          borderLeft: "1px solid rgba(100,220,255,0.16)",
+          boxShadow: "0 0 20px rgba(42,160,255,0.12)",
         }}>
-          ESCAPE ORBIT
+          <div style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: "16px",
+            fontWeight: 300,
+            color: "rgba(185,235,255,0.62)",
+            letterSpacing: "0.2em",
+          }}>
+            ESCAPE ORBIT
+          </div>
+          <div style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: "8px",
+            color: db.connected ? "rgba(100,200,140,0.6)" : "rgba(200,100,100,0.6)",
+            letterSpacing: "0.15em",
+            marginTop: "4px",
+          }}>
+            {db.connected
+              ? `◦ LIVE · ${onlinePilotCount} PILOT${onlinePilotCount === 1 ? "" : "S"} · ${db.playerName ?? "YOU"} ◦`
+              : "◦ OFFLINE · FAKE SHIPS ◦"}
+          </div>
         </div>
-        <div style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: "8px",
-          color: db.connected ? "rgba(100,200,140,0.6)" : "rgba(200,100,100,0.6)",
-          letterSpacing: "0.15em",
-          marginTop: "4px",
-        }}>
-          {db.connected
-            ? `◦ LIVE · ${onlinePilotCount} PILOT${onlinePilotCount === 1 ? "" : "S"} · ${db.playerName ?? "YOU"} ◦`
-            : "◦ OFFLINE · FAKE SHIPS ◦"}
-        </div>
-      </div>
+      </DraggablePanel>
 
-      <div style={{
-        position: "fixed",
-        bottom: "24px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 60,
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-        gap: "16px",
-        width: "min(760px, calc(100vw - 32px))",
-      }}>
+      <DraggablePanel initialStyle={{ bottom: 24, left: "calc(50% - 278px)", transform: "none" }}>
         <EventFeed events={events} embedded />
+      </DraggablePanel>
+
+      <DraggablePanel initialStyle={{ bottom: 24, left: "calc(50% - 42px)", transform: "none" }}>
         <MissionPanel
           mission={mission}
           playerName={db.playerName ?? ""}
@@ -301,7 +290,7 @@ export default function App() {
           onUploadPhoto={handleUploadPhoto}
           embedded
         />
-      </div>
+      </DraggablePanel>
     </div>
   );
 }
