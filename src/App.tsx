@@ -6,6 +6,7 @@ import EventFeed from "./components/EventFeed";
 import StarNavigationMap from "./components/StarNavigationMap";
 import GalaxyGuide from "./components/GalaxyGuide";
 import DraggablePanel from "./components/DraggablePanel";
+import MobileOrientationPrompt from "./components/MobileOrientationPrompt";
 import { useEscapeOrbitDb } from "./spacetime/useEscapeOrbitDb";
 import {
   dbMissionToUiMission,
@@ -220,6 +221,7 @@ export default function App() {
       background: "radial-gradient(ellipse at 30% 50%, #080e2a 0%, #020408 70%)",
       position: "relative",
     }}>
+      <MobileOrientationPrompt />
       <GalaxyGuide />
 
       <UniverseScene
