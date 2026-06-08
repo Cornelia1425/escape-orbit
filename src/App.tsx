@@ -4,6 +4,7 @@ import UniverseScene from "./components/UniverseScene";
 import MissionPanel from "./components/MissionPanel";
 import EventFeed from "./components/EventFeed";
 import StarNavigationMap from "./components/StarNavigationMap";
+import GalaxyGuide from "./components/GalaxyGuide";
 import { useEscapeOrbitDb } from "./spacetime/useEscapeOrbitDb";
 import {
   dbMissionToUiMission,
@@ -218,6 +219,8 @@ export default function App() {
       background: "radial-gradient(ellipse at 30% 50%, #080e2a 0%, #020408 70%)",
       position: "relative",
     }}>
+      <GalaxyGuide />
+
       <UniverseScene
         mission={mission}
         fakePlayers={fakePlayers}
