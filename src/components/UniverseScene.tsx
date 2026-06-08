@@ -55,7 +55,7 @@ export default function UniverseScene({
       <Canvas
         camera={{ position: [0, 0, 10], fov: 60 }}
         gl={{ antialias: true, alpha: false }}
-        style={{ background: "transparent" }}
+        style={{ background: "transparent", touchAction: "none" }}
       >
         <ambientLight intensity={0.15} />
         <directionalLight position={[0, 5, 5]} intensity={0.3} />
