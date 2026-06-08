@@ -115,8 +115,8 @@ export default function MissionPanel({
       bottom: embedded ? undefined : "24px",
       right: embedded ? undefined : "28px",
       width: embedded ? "222px" : "280px",
-      maxHeight: embedded ? "330px" : "calc(100vh - 48px)",
-      overflowY: "auto",
+      maxHeight: embedded ? undefined : "calc(100vh - 48px)",
+      overflowY: embedded ? "visible" : "auto",
       background: embedded
         ? "linear-gradient(180deg, rgba(10,28,62,0.58), rgba(2,8,24,0.42)), repeating-linear-gradient(0deg, rgba(120,190,255,0.07) 0 1px, transparent 1px 7px)"
         : "rgba(4,8,28,0.85)",
