@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Escape Orbit Focus",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Block Instagram during Escape Orbit focus missions.",
   "icons": {
     "16": "icons/icon16.png",
@@ -19,28 +19,23 @@
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "matches": ["*://instagram.com/*", "*://www.instagram.com/*"],
-      "js": ["instagram-guard.js"],
-      "run_at": "document_start"
-    }
-  ],
   "permissions": [
     "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess",
     "storage",
     "tabs",
     "webNavigation"
   ],
-  "host_permissions": [
-    "*://instagram.com/*",
-    "*://www.instagram.com/*"
-  ],
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  },
   "web_accessible_resources": [
     {
       "resources": ["blocked.html", "blocked.js"],
-      "matches": ["*://instagram.com/*", "*://www.instagram.com/*"]
+      "matches": ["<all_urls>"]
     }
   ],
   "externally_connectable": {
