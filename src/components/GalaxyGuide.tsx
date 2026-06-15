@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { checkExtensionInstalled } from "../extension/focusExtension";
 
-const STORE_URL = import.meta.env.VITE_EXTENSION_STORE_URL ?? "";
+const STORE_URL = import.meta.env.VITE_EXTENSION_STORE_URL ?? "https://chromewebstore.google.com/detail/escape-orbit-focus/cllhlnkiehoblnipcbjblnhinmbbllii";
 const POSITION_KEY = "escape_orbit_guide_position";
 const DISMISSED_KEY = "escape_orbit_guide_dismissed";
 
@@ -214,20 +214,7 @@ export default function GalaxyGuide() {
           </span>
         </div>
 
-        {!STORE_URL && (
-          <p style={{
-            fontFamily: "'DM Mono', monospace",
-            fontSize: "9px",
-            color: "rgba(255,100,80,0.85)",
-            margin: 0,
-            lineHeight: 1.8,
-            letterSpacing: "0.04em",
-          }}>
-            Chrome extension to be released soon. Stay tuned.
-          </p>
-        )}
-
-        {STORE_URL && extState === "missing" && (
+        {extState === "missing" && (
           <>
             <a
               href={STORE_URL}
@@ -237,29 +224,30 @@ export default function GalaxyGuide() {
                 fontFamily: "'DM Mono', monospace",
                 fontSize: "10px",
                 letterSpacing: "0.1em",
-                color: "rgba(140,200,255,0.9)",
-                background: "rgba(40,100,180,0.12)",
-                border: "1px solid rgba(80,160,255,0.35)",
-                padding: "9px 10px",
+                color: "rgba(140,200,255,0.95)",
+                background: "rgba(40,100,180,0.18)",
+                border: "1px solid rgba(80,160,255,0.5)",
+                padding: "10px 10px",
                 textDecoration: "none",
                 textTransform: "uppercase",
                 textAlign: "center",
                 display: "block",
                 cursor: "pointer",
+                fontWeight: 500,
               }}
             >
-              ↗ Install Focus Shield
+              ↗ Add to Chrome — Free
             </a>
             <p style={{
               fontFamily: "'DM Mono', monospace",
               fontSize: "9px",
-              color: "rgba(100,130,180,0.45)",
+              color: "rgba(100,130,180,0.5)",
               margin: 0,
               lineHeight: 1.7,
               letterSpacing: "0.02em",
             }}>
               Install, then return to this tab.
-              Blocking activates on launch.
+              Instagram blocks on launch.
             </p>
           </>
         )}
